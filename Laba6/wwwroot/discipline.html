@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Дисциплины</title>
+    <link href="lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="lib/jquery/dist/jquery.js"></script>
+    <link href="lib/jquery-ui/themes/base/jquery-ui.min.css" rel="stylesheet" />
+    <script src="lib/jquery-ui/jquery-ui.js"></script>
+    <script src="lib/jquery-ui/ui/i18n/datepicker-ru.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Список дисциплин</h2>
+        <form name="disciplineForm">
+            <label for="id" id="CRUD" name="CRUD">Добавить:</label>
+            <input type="hidden" id="id" name="id"/>
+            <div class="form-group">
+                <label for="name">Название</label>
+                <input class="form-control" name="name" id="name" />
+            </div>
+            <div class="form-group">
+                <label for="hours">Количество часов</label>
+                <input class="form-control" name="hours" id="hours" />
+            </div>
+            <div class="form-group">
+                <label for="reportType">Тип отчетности</label>
+                <input class="form-control" name="reportType" id="reportType" />
+            </div>
+            <div class="form-group">
+                <label Добавить>Специальность</label>
+                <select id="specializationId" name="specializationId"></select>
+            </div>
+            <div class="panel-body">
+                <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+                <a id="reset" class="btn btn-sm btn-primary">Сбросить</a>
+            </div>
+        </form>
+
+        <table class="table table-condensed table-striped table-bordered">
+            <thead><tr><th>Код</th><th>Название</th><th>Количество часов</th><th>Тип отчетности</th><th>Специальность</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        function Getdisciplines() {
+            $.ajax({
+                url: '/api/discipline',
+                type: 'GET',
+                contentType: "application/json",
+                success: function (disciplines) {
+                    var rows = "";
+                    $.each(disciplines, function (index, discipline) {
+                        rows += row(discipline);
+                    })
+                    $("table tbody").append(rows);
+                }
+            });
+        }
+
+        function Getdiscipline(id) {
+            $.ajax({
+                url: '/api/discipline/' + id,
+                type: 'GET',
+                contentType: "application/json",
+                success: function (discipline) {
+                    var form = document.forms["disciplineForm"];
+                    form.elements["id"].value = discipline.id;
+                    form.elements["name"].value = discipline.name;
+                    form.elements["hours"].value = discipline.hours;
+                    form.elements["reportType"].value = discipline.reportType;
+                    form.elements["specializationId"].value = discipline.specializationId;
+                        }
+                    });
+        }
+
+        function Creatediscipline(name, hours, reportType, specializationId) {
+                    $.ajax({
+                        url: "api/discipline",
+                        contentType: "application/json",
+                        method: "POST",
+                        data: JSON.stringify({
+                            name: name,
+                            hours: hours,
+                            reportType: reportType,
+                            specializationId: specializationId
+                        }),
+                        success: function (discipline) {
+                            reset();
+                            var form = document.forms["disciplineForm"];
+                            discipline.specializationId = form.elements["specializationId"].options[specializationId].value;
+                            $("table tbody").append(row(department));
+                        }
+                    })
+        }
+
+        function Editdiscipline(id, name, hours, reportType, specializationId) {
+                    $.ajax({
+                        url: "api/discipline",
+                        contentType: "application/json",
+                        method: "PUT",
+                        data: JSON.stringify({
+                            id: id,
+                            name: name,
+                            hours: hours,
+                            reportType: reportType,
+                            specializationId: specializationId
+                        }),
+                        success: function (discipline) {
+                            reset();
+                            var form = document.forms["disciplineForm"];
+                            discipline.specializationId = form.elements["specializationId"].options[specializationId].value;
+                            $("tr[data-rowid='" + discipline.id + "']").replaceWith(row(discipline));
+                        }
+                    })
+        }
+
+        function reset() {
+            var form = document.forms["disciplineForm"];
+            form.reset();
+            form.elements["id"].value = null;
+            $("#CRUD").html("Добавить:");
+        }
+
+        function Deletediscipline(id) {
+                    $.ajax({
+                        url: "api/discipline/" + id,
+                        contentType: "application/json",
+                        method: "DELETE",
+                        success: function (discipline) {
+                            $("tr[data-rowid='" + discipline.Id + "']").remove();
+                        }
+                    })
+        }
+
+        var row = function (discipline) {
+                    return "<tr data-rowid='" + discipline.id + "'><td>" + discipline.id + "</td>" +
+                        "<td>" + discipline.name + "</td>" +
+                        "<td>" + discipline.hours + "</td>" +
+                        "<td>" + discipline.reportType + "</td>" +
+                        "<td>" + discipline.specialization + "</td>" +
+                        "<td><a class='editLink' data-id='" + discipline.id + "'>Изменить</a> | " +
+                        "<a class='removeLink' data-id='" + discipline.id + "'>Удалить</a></td></tr>";
+        }
+
+        function Getspecializations() {
+                    var listItems = "";
+                    $.ajax({
+                        url: '/api/discipline/specializations',
+                        type: 'GET',
+                        contentType: "application/json",
+                        success: function (specializations) {
+                            listItems = listItems + "<option value=0 selected>(выбор)</option>";
+                            $.each(specializations, function (index, specialization) {
+                                listItems = listItems + "<option value='" + specialization.id + "'>" + specialization.name + "</option>";
+                            });
+                            $("#specializationId").html(listItems);
+                        }
+                    });
+        }
+
+        $("#reset").click(function (e) {
+                    e.preventDefault();
+                    reset();
+        })
+
+        $("form").submit(function (e) {
+
+            e.preventDefault();
+            var id = this.elements["id"].value;
+            var name = this.elements["name"].value;
+            var hours = this.elements["hours"].value;
+            var reportType = this.elements["reportType"].value;
+            var specializationId = this.elements["specializationId"].value;
+            if (id != "")
+                Editdiscipline(id, name, hours, reportType, specializationId);
+            else
+                Creatediscipline(name, hours, reportType, specializationId);
+        });
+
+        $("body").on("click", ".editLink", function () {
+                    var id = $(this).data("id");
+                    $("#CRUD").html("Изменить:");
+                    Getdiscipline(id);
+        })
+
+        $("body").on("click", ".removeLink", function () {
+                    var id = $(this).data("id");
+                    Deletediscipline(id);
+                    reset();
+        })
+
+        Getdisciplines();
+        Getspecializations();
+        $(document).ready(function () {
+            $("#date").datepicker({ dateFormat: "yy-mm-dd" });
+        });
+
+    </script>
+</body>
+</html>
